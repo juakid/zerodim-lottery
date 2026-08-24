@@ -1,0 +1,21 @@
+# 依赖
+node_modules/
+
+# Netlify CLI 本地状态
+.netlify/
+
+# 本地数据（Netlify Blobs 不可用时的文件回退存储）
+.data/
+
+# npm 本地缓存（仅本机构建用）
+.npm-cache/
+
+# 环境变量（严禁提交！）
+.env
+.env.*
+!.env.example
+
+# 其他
+*.log
+.DS_Store
+Thumbs.db

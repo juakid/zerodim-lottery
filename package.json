@@ -1,0 +1,29 @@
+{
+  "name": "zerodim-lottery",
+  "version": "1.0.0",
+  "private": true,
+  "description": "零次元动漫社抽奖机：纯 HTML/CSS/JS 前端 + Netlify Functions + Netlify Blobs 持久化",
+  "keywords": [
+    "netlify",
+    "functions",
+    "blobs",
+    "lottery",
+    "anime"
+  ],
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "netlify dev",
+    "hash-password": "node scripts/hash-password.js",
+    "test": "node test/smoke.js"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.0.1"
+  },
+  "devDependencies": {
+    "netlify-cli": "^27.1.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

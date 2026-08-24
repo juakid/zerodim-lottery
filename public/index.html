@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="零次元动漫社抽奖机 —— 社团活动幸运抽奖">
+<meta name="referrer" content="no-referrer">
+<title>零次元动漫社抽奖机</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="bg-decor" aria-hidden="true"></div>
+<div class="app-shell">
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">🎴</div>
+      <div class="brand-text">
+        <h1>零次元动漫社<span class="grad">抽奖机</span></h1>
+        <p class="tagline">Zero Dimension Anime Club · 幸运抽奖</p>
+      </div>
+    </div>
+    <div id="status-pill" class="status-pill is-connecting" role="status" aria-live="polite" title="数据同步状态">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="status-label">连接中…</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="角色切换">
+    <button id="tab-participant" class="tab is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-participant">🎟️ 抽奖入口</button>
+    <button id="tab-admin" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-admin">🛡️ 管理者</button>
+  </nav>
+
+  <div id="offline-banner" class="offline-banner" hidden>
+    <span aria-hidden="true">⚠️</span>
+    <span>离线 / 本地模式：无法连接服务器，数据无法同步，抽奖已暂停。请检查网络后刷新页面。</span>
+  </div>
+
+  <main>
+
+    <!-- ==================== 抽奖入口 ==================== -->
+    <section id="panel-participant" class="panel is-active" role="tabpanel" aria-labelledby="tab-participant">
+
+      <div class="card draw-card">
+        <h2 class="card-title">🎰 开始抽奖</h2>
+        <p class="card-desc">输入你的用户 ID 或昵称，然后点击抽奖！</p>
+        <div class="field-row">
+          <label class="sr-only" for="draw-user">用户 ID / 昵称</label>
+          <input id="draw-user" type="text" maxlength="24" autocomplete="off" spellcheck="false" placeholder="用户 ID / 昵称（如：小樱）">
+          <button id="btn-draw" class="btn btn-primary btn-lg" type="button">✨ 抽 奖 ✨</button>
+        </div>
+        <div id="draw-error" class="draw-error" hidden></div>
+        <div id="draw-result" class="draw-result" hidden aria-live="polite">
+          <div class="result-badge">🎉 恭喜中奖 🎉</div>
+          <div id="result-prize" class="result-prize"></div>
+          <div id="result-chances" class="result-chances"></div>
+          <div id="confetti" class="confetti" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">🎁 当前奖品池</h2>
+          <span id="prize-pool-summary" class="badge-soft">加载中…</span>
+        </div>
+        <ul id="prize-pool" class="chip-list"></ul>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">🏆 最近中奖</h2>
+          <button id="btn-refresh-winners" class="btn btn-ghost btn-sm" type="button">刷新</button>
+        </div>
+        <ul id="recent-winners" class="winner-list"></ul>
+        <p id="winners-empty" class="muted" hidden>还没有人中奖，快来当第一个欧皇吧！</p>
+      </div>
+
+    </section>
+
+    <!-- ==================== 管理者 ==================== -->
+    <section id="panel-admin" class="panel" role="tabpanel" aria-labelledby="tab-admin">
+
+      <div id="admin-login" class="card">
+        <h2 class="card-title">🔐 管理员登录</h2>
+        <p class="card-desc">仅限社团负责人使用，请输入管理员密码。</p>
+        <div class="field-row">
+          <label class="sr-only" for="admin-pass">管理员密码</label>
+          <input id="admin-pass" type="password" maxlength="64" autocomplete="current-password" placeholder="管理员密码">
+          <button id="btn-login" class="btn btn-primary" type="button">登 录</button>
+        </div>
+        <div id="login-error" class="form-error" hidden></div>
+      </div>
+
+      <div id="admin-panel" hidden>
+
+        <div class="admin-bar">
+          <button id="btn-refresh-admin" class="btn btn-ghost btn-sm" type="button">🔄 刷新数据</button>
+          <button id="btn-lock" class="btn btn-danger btn-sm" type="button">🔒 锁定面板（退出）</button>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2 class="card-title">🏷️ 奖品管理</h2>
+            <span id="prize-summary" class="badge-soft">—</span>
+          </div>
+          <div class="add-prize">
+            <label class="sr-only" for="prize-name">奖品名称</label>
+            <input id="prize-name" type="text" maxlength="40" placeholder="奖品名称（如：一番赏 手办）">
+            <label class="sr-only" for="prize-total">奖品总数</label>
+            <input id="prize-total" type="number" min="1" max="99999" placeholder="总数">
+            <button id="btn-add-prize" class="btn btn-primary" type="button">＋ 添加</button>
+          </div>
+          <div id="prize-admin-error" class="form-error" hidden></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>奖品</th><th>总数</th><th>已抽</th><th>剩余</th><th class="th-actions">操作</th></tr>
+              </thead>
+              <tbody id="prize-rows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">🎟️ 次数管理</h2>
+          <p class="card-desc">为指定用户增加抽奖机会。</p>
+          <div class="add-prize">
+            <label class="sr-only" for="chance-user">用户 ID</label>
+            <input id="chance-user" type="text" maxlength="24" placeholder="用户 ID / 昵称">
+            <label class="sr-only" for="chance-amount">增加次数</label>
+            <input id="chance-amount" type="number" min="1" max="100" value="1">
+            <button id="btn-add-chance" class="btn btn-primary" type="button">＋ 次数</button>
+          </div>
+          <p id="chance-result" class="muted" hidden></p>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h2 class="card-title">📜 中奖记录</h2>
+            <button id="btn-reset" class="btn btn-danger btn-sm" type="button">⚠️ 重置活动</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>用户 ID</th><th>奖品</th><th>中奖时间</th></tr>
+              </thead>
+              <tbody id="winner-rows"></tbody>
+            </table>
+          </div>
+          <p id="winners-admin-empty" class="muted" hidden>暂无中奖记录。</p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">🔑 修改管理员密码</h2>
+          <p class="card-desc">修改后所有已登录的管理员会话都会失效，需要重新登录。</p>
+          <div class="pw-grid">
+            <label class="sr-only" for="pw-current">当前密码</label>
+            <input id="pw-current" type="password" maxlength="64" autocomplete="current-password" placeholder="当前密码">
+            <label class="sr-only" for="pw-new">新密码</label>
+            <input id="pw-new" type="password" maxlength="64" autocomplete="new-password" placeholder="新密码（8-64 位）">
+            <label class="sr-only" for="pw-confirm">确认新密码</label>
+            <input id="pw-confirm" type="password" maxlength="64" autocomplete="new-password" placeholder="确认新密码">
+            <button id="btn-change-pw" class="btn btn-primary" type="button">保存新密码</button>
+          </div>
+          <div id="pw-error" class="form-error" hidden></div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="app-footer">零次元动漫社 · 抽奖机 v1.0 · 数据存储于云端（Netlify Blobs）</footer>
+</div>
+
+<div id="modal-root" class="modal-root" hidden>
+  <div class="modal-mask"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <h3 id="modal-title">确认操作</h3>
+    <p id="modal-text"></p>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="btn btn-ghost" type="button">取消</button>
+      <button id="modal-ok" class="btn btn-danger" type="button">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-root" class="toast-root" aria-live="polite"></div>
+<script src="/js/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# ============================================================
+# 零次元动漫社抽奖机 · Netlify 配置
+# ============================================================
+
+[build]
+  # 前端静态文件目录（纯 HTML/CSS/JS，无构建步骤）
+  publish = "public"
+
+[functions]
+  # 后端函数目录（api.js 为统一入口的 catch-all 函数）
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# API 重定向：/api/* -> 统一函数入口（前端只调用 /api/... 即可）
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true
+
+# ---- 全站安全响应头 ----
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    Strict-Transport-Security = "max-age=63072000"
+    # 严格 CSP：无内联脚本/样式，杜绝 XSS 注入面
+    Content-Security-Policy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# ---- 静态资源缓存 ----
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
