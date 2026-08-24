@@ -123,6 +123,9 @@
     offline: '离线 / 本地模式',
   };
 
+  /** 状态标签缓存：本地开发模式与云端模式文案不同 */
+  let lastMode = 'cloud';
+
   function setStatus(kind) {
     statusKind = kind;
     const pill = $('#status-pill');
@@ -132,26 +135,34 @@
     $('#btn-draw').disabled = kind === 'offline' || kind === 'syncing' || kind === 'connecting';
   }
 
-  async function healthCheck() {
-    if (statusKind === 'syncing') return;
+  function applyOnlineLabel() {
+    $('#status-label').textContent =
+      lastMode === 'local-file' ? '已连接 · 本地开发模式' : STATUS_TEXT.online;
+  }
+
+  /**
+   * 健康检查。force=true 时忽略「同步中」守卫——
+   * 操作结束后的状态回读必须强制执行，否则状态胶囊会永远停在「同步中…」。
+   */
+  async function healthCheck(force = false) {
+    if (statusKind === 'syncing' && !force) return;
     try {
       const d = await api('GET', '/health');
+      lastMode = d.mode || 'cloud';
       setStatus('online');
-      if (d.mode === 'local-file') {
-        $('#status-label').textContent = '已连接 · 本地开发模式';
-      }
+      applyOnlineLabel();
     } catch (err) {
       setStatus('offline');
     }
   }
 
-  /** 包裹任意操作：期间状态显示「同步中」，结束后回读真实状态 */
+  /** 包裹任意操作：期间状态显示「同步中」，结束后强制回读真实状态 */
   async function withSync(fn) {
     setStatus('syncing');
     try {
       return await fn();
     } finally {
-      await healthCheck();
+      await healthCheck(true);
     }
   }
 
