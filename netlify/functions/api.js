@@ -42,6 +42,18 @@ const v = require('./_shared/validate');
 const MAX_PRIZES = 50;
 const MAX_USERS = 1000;
 
+/**
+ * @netlify/blobs 的 Lambda 兼容模式要求先调用 connectLambda(event) 注入
+ * Blobs 运行上下文（Netlify Functions v1 不会自动配置）。
+ * 懒加载：本地无依赖（纯文件回退）时也不报错。
+ */
+let connectLambda = null;
+try {
+  connectLambda = require('@netlify/blobs').connectLambda;
+} catch (err) {
+  /* 未安装依赖时忽略 */
+}
+
 /* ---------------- 工具 ---------------- */
 
 function parseRoute(event) {
@@ -84,6 +96,15 @@ function drawIntervalMs() {
 
 exports.handler = async (event) => {
   try {
+    // 注入 Netlify Blobs 运行上下文（必须最先调用；无 blobs 上下文的
+    // 本地/测试事件会自动跳过）
+    if (connectLambda) {
+      try {
+        connectLambda(event);
+      } catch (err) {
+        /* 事件中无 blobs 字段（本地开发 / 测试）时忽略 */
+      }
+    }
     const { method, segments } = parseRoute(event);
     if (segments.length < 2 || segments[0] !== 'api') {
       return error(404, 'NOT_FOUND', '接口不存在');

@@ -26,10 +26,6 @@ const CONFIG_KEY = 'config';
 
 const DEFAULT_MAX_WINNERS = 500;
 
-function isProd() {
-  return process.env.NETLIFY === 'true';
-}
-
 function localDir() {
   return process.env.LOCAL_STORAGE_DIR || path.join(process.cwd(), '.data');
 }
@@ -111,11 +107,19 @@ async function getImpl() {
         }),
       };
     } catch (err) {
-      if (isProd()) {
-        console.error('[storage] Netlify Blobs 初始化失败:', err);
-        throw new ApiError(500, 'STORAGE_ERROR', '数据存储服务初始化失败，请查看 Netlify 函数日志');
+      console.warn('[storage] Netlify Blobs 不可用: ' + err.message);
+      // 本地文件回退仅在文件系统真实可写时才采用。
+      // （Netlify 函数运行在只读的 /var/task 上，必须在这里就失败并给出明确提示，
+      //   而不是等到第一次写入时才崩溃。）
+      try {
+        fs.mkdirSync(localDir(), { recursive: true });
+        const probeFile = path.join(localDir(), '__writable_probe__');
+        fs.writeFileSync(probeFile, 'ok', 'utf8');
+        fs.unlinkSync(probeFile);
+      } catch (fsErr) {
+        console.error('[storage] 本地文件存储不可用（文件系统只读？）:', fsErr);
+        throw new ApiError(500, 'STORAGE_ERROR', '数据存储服务不可用：Netlify Blobs 初始化失败，且运行环境文件系统只读');
       }
-      console.warn('[storage] Netlify Blobs 不可用，回退到本地文件存储（仅限本地开发）。原因: ' + err.message);
       return {
         mode: 'local-file',
         casSupported: true,

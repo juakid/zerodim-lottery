@@ -18,7 +18,8 @@ const { hashPassword, verifyPassword, randomToken } = require('./crypto');
 const SESSION_PREFIX = 'session:';
 
 function isProd() {
-  return process.env.NETLIFY === 'true';
+  // Netlify Functions 运行在 AWS Lambda 上；build 环境则是 NETLIFY=true
+  return process.env.NETLIFY === 'true' || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
 }
 
 function sessionTtlMs() {
