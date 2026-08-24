@@ -367,6 +367,11 @@ input[type="number"] { width: 96px; flex: none; }
 
 .admin-bar { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 14px; }
 
+/* ---------------- 次数管理：用户表格与批量操作 ---------------- */
+.sub-title { margin: 18px 0 8px; font-size: 0.95rem; color: var(--ink-dim); }
+.batch-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.batch-bar input[type="number"] { width: 110px; }
+
 /* ---------------- 杂项 ---------------- */
 .muted { color: var(--ink-dim); font-size: 0.85rem; margin: 10px 0 0; }
 .center { text-align: center; }

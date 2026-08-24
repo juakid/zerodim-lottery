@@ -312,7 +312,7 @@
   }
 
   async function loadAdminData() {
-    await Promise.all([loadPrizesAdmin(), loadWinnersAdmin()]);
+    await Promise.all([loadPrizesAdmin(), loadWinnersAdmin(), loadUsersAdmin()]);
   }
 
   /* ---------- 登录 / 锁定 ---------- */
@@ -512,6 +512,116 @@
       const d = await withSync(() => api('POST', '/chances', { userId, amount }));
       out.hidden = false;
       out.textContent = `已为「${d.userId}」增加 ${amount} 次，当前剩余 ${d.chances} 次`;
+      loadUsersAdmin();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  /* ---------- 用户列表与批量次数（管理） ---------- */
+
+  async function loadUsersAdmin() {
+    try {
+      const d = await api('GET', '/users');
+      const tb = $('#user-rows');
+      tb.replaceChildren();
+      $('#user-count').textContent = String(d.users.length);
+      $('#users-empty').hidden = d.users.length > 0;
+      for (const u of d.users) tb.appendChild(buildUserRow(u));
+    } catch (err) {
+      if (err.status === 401) {
+        renderAdminView(false);
+      } else {
+        toast(err.message, 'error');
+      }
+    }
+  }
+
+  function buildUserRow(u) {
+    const tr = el('tr');
+    tr.dataset.userId = u.userId;
+    tr.append(el('td', null, u.userId), el('td', null, String(u.chances)));
+    const tdNew = el('td');
+    const input = el('input', 'row-input chances-input');
+    input.type = 'number';
+    input.min = 0;
+    input.max = 9999;
+    input.value = u.chances;
+    input.dataset.original = String(u.chances);
+    tdNew.appendChild(input);
+    tr.appendChild(tdNew);
+    return tr;
+  }
+
+  /** 收集表格中修改过的行；任一输入非法时返回 { error } */
+  function collectUserChanges() {
+    const changes = [];
+    for (const tr of $$('#user-rows tr')) {
+      const input = $('.chances-input', tr);
+      const userId = tr.dataset.userId;
+      const original = Number(input.dataset.original);
+      const raw = input.value.trim();
+      const value = Number(raw);
+      if (raw === '' || !Number.isInteger(value) || value < 0 || value > 9999) {
+        return { error: `「${userId}」的次数需为 0-9999 的整数` };
+      }
+      if (value !== original) changes.push({ userId, chances: value });
+    }
+    return { changes };
+  }
+
+  /** 分批提交（后端单次上限 300 条），整批为原子操作 */
+  async function sendBatchOps(operations) {
+    let updated = 0;
+    for (let i = 0; i < operations.length; i += 200) {
+      const d = await api('POST', '/users/chances', { operations: operations.slice(i, i + 200) });
+      updated += d.updated || 0;
+    }
+    return updated;
+  }
+
+  async function doSaveUsers() {
+    const { changes, error } = collectUserChanges();
+    if (error) {
+      toast(error, 'error');
+      return;
+    }
+    if (!changes.length) {
+      toast('没有需要保存的修改', 'info');
+      return;
+    }
+    try {
+      const updated = await withSync(() => sendBatchOps(changes));
+      toast(`已保存 ${updated} 项修改`, 'success');
+      loadUsersAdmin();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  async function doSetAll() {
+    const value = Number($('#batch-set-value').value);
+    if (!Number.isInteger(value) || value < 0 || value > 9999) {
+      toast('请输入 0-9999 的整数', 'error');
+      return;
+    }
+    const rows = $$('#user-rows tr');
+    if (!rows.length) {
+      toast('还没有注册用户', 'info');
+      return;
+    }
+    const ok = await confirmDialog({
+      title: '批量设置次数',
+      text: `确定把所有 ${rows.length} 名用户的抽奖次数都设为 ${value} 次吗？`,
+      okText: '确认设置',
+    });
+    if (!ok) return;
+    try {
+      const updated = await withSync(() =>
+        sendBatchOps(rows.map((tr) => ({ userId: tr.dataset.userId, chances: value })))
+      );
+      toast(`已设置 ${updated} 名用户`, 'success');
+      loadUsersAdmin();
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -621,6 +731,11 @@
     $('#btn-refresh-admin').addEventListener('click', loadAdminData);
     $('#btn-add-prize').addEventListener('click', doAddPrize);
     $('#btn-add-chance').addEventListener('click', doAddChance);
+    $('#btn-save-users').addEventListener('click', doSaveUsers);
+    $('#btn-set-all').addEventListener('click', doSetAll);
+    $('#batch-set-value').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSetAll();
+    });
     $('#btn-reset').addEventListener('click', doReset);
     $('#btn-change-pw').addEventListener('click', doChangePassword);
   }

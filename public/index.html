@@ -124,7 +124,7 @@
 
         <div class="card">
           <h2 class="card-title">🎟️ 次数管理</h2>
-          <p class="card-desc">为指定用户增加抽奖机会。</p>
+          <p class="card-desc">为指定用户增加抽奖机会，或在下方批量修改所有用户次数。</p>
           <div class="add-prize">
             <label class="sr-only" for="chance-user">用户 ID</label>
             <input id="chance-user" type="text" maxlength="24" placeholder="用户 ID / 昵称">
@@ -133,6 +133,23 @@
             <button id="btn-add-chance" class="btn btn-primary" type="button">＋ 次数</button>
           </div>
           <p id="chance-result" class="muted" hidden></p>
+
+          <h3 class="sub-title">📋 已注册用户（共 <span id="user-count">0</span> 人）</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>用户 ID</th><th>当前次数</th><th>修改为</th></tr>
+              </thead>
+              <tbody id="user-rows"></tbody>
+            </table>
+          </div>
+          <p id="users-empty" class="muted" hidden>还没有注册用户。</p>
+          <div class="batch-bar">
+            <button id="btn-save-users" class="btn btn-primary btn-sm" type="button">💾 保存修改</button>
+            <label class="sr-only" for="batch-set-value">统一设置次数</label>
+            <input id="batch-set-value" type="number" min="0" max="9999" value="1" aria-label="统一设置次数">
+            <button id="btn-set-all" class="btn btn-ghost btn-sm" type="button">全部设为该次数</button>
+          </div>
         </div>
 
         <div class="card">

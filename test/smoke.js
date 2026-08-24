@@ -242,6 +242,47 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   r = await call('POST', '/api/draw', { body: { userId: '慢速酱' } });
   check('间隔后再次抽奖成功', r.status === 200);
 
+  // ---------- 用户列表与批量修改次数（管理） ----------
+  r = await call('GET', '/api/users');
+  check('未登录查看用户列表 -> 401', r.status === 401);
+  r = await call('GET', '/api/users', { cookie: cookie2 });
+  check(
+    '管理员查看用户列表（含 测试酱/慢速酱）',
+    r.status === 200 &&
+      r.data.users.some((u) => u.userId === '测试酱') &&
+      r.data.users.some((u) => u.userId === '慢速酱')
+  );
+
+  r = await call('POST', '/api/users/chances', {
+    body: { operations: [{ userId: '测试酱', chances: 3 }, { userId: '慢速酱', chances: 2 }] },
+    cookie: cookie2,
+  });
+  check('批量修改两个用户次数', r.status === 200 && r.data.updated === 2);
+  r = await call('GET', '/api/users', { cookie: cookie2 });
+  const bu1 = r.data.users.find((u) => u.userId === '测试酱');
+  const bu2 = r.data.users.find((u) => u.userId === '慢速酱');
+  check('批量设置后次数正确（3 / 2）', !!bu1 && bu1.chances === 3 && !!bu2 && bu2.chances === 2);
+
+  r = await call('POST', '/api/users/chances', { body: { operations: [] }, cookie: cookie2 });
+  check('空操作数组 -> 400', r.status === 400);
+  r = await call('POST', '/api/users/chances', {
+    body: { operations: [{ userId: '测试酱', chances: -1 }] },
+    cookie: cookie2,
+  });
+  check('负数次数 -> 400', r.status === 400);
+  r = await call('POST', '/api/users/chances', {
+    body: { operations: [{ userId: '测试酱', chances: 'abc' }] },
+    cookie: cookie2,
+  });
+  check('非数字次数 -> 400', r.status === 400);
+  r = await call('POST', '/api/users/chances', { body: { operations: 'x' }, cookie: cookie2 });
+  check('operations 非数组 -> 400', r.status === 400);
+  r = await call('POST', '/api/users/chances', {
+    body: { operations: [{ userId: '<b>x</b>', chances: 1 }] },
+    cookie: cookie2,
+  });
+  check('批量中非法用户 ID -> 400', r.status === 400);
+
   // ---------- 并发抽奖（不超发） ----------
   // 5 个不同用户各 1 次机会，并发抽取仅剩 3 份的奖品：必须恰好 3 次成功、不超发。
   // （同用户的连点由 DRAW_MIN_INTERVAL_MS 门禁拦截，已在上面 TOO_FAST 用例验证）

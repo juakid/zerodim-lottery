@@ -56,6 +56,15 @@ function cleanAmount(raw) {
   return n;
 }
 
+/** 批量设置时的目标次数：允许为 0（清零） */
+function cleanChances(raw) {
+  const n = typeof raw === 'number' ? raw : Number(String(raw).trim());
+  if (!Number.isInteger(n) || n < 0 || n > 9999) {
+    throw new ApiError(400, 'INVALID_CHANCES', '抽奖次数需为 0-9999 的整数');
+  }
+  return n;
+}
+
 function cleanLimit(raw) {
   const n = Number(String(raw).trim());
   if (!Number.isInteger(n) || n < 1 || n > 50) {
@@ -90,6 +99,7 @@ module.exports = {
   cleanPrizeName,
   cleanTotal,
   cleanAmount,
+  cleanChances,
   cleanLimit,
   cleanPassword,
   cleanPrizeId,

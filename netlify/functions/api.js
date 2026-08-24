@@ -41,6 +41,7 @@ const v = require('./_shared/validate');
 
 const MAX_PRIZES = 50;
 const MAX_USERS = 1000;
+const MAX_BATCH_OPS = 300;
 
 /**
  * @netlify/blobs 的 Lambda 兼容模式要求先调用 connectLambda(event) 注入
@@ -361,6 +362,43 @@ exports.handler = async (event) => {
         return { chances: next.users[userId].chances };
       });
       return json(200, { ok: true, userId, chances: result.info.chances });
+    }
+
+    /* ---------- 用户列表（管理） ---------- */
+    if (method === 'GET' && r1 === 'users' && !r2) {
+      await auth.requireAdmin(event);
+      const state = await readState();
+      const users = Object.entries(state.users)
+        .map(([userId, u]) => ({ userId, chances: u.chances }))
+        .sort((a, b) => a.userId.localeCompare(b.userId, 'zh-CN'));
+      return json(200, { users, total: users.length });
+    }
+
+    /* ---------- 批量修改用户抽奖次数（管理；整批一次原子提交） ---------- */
+    if (method === 'POST' && r1 === 'users' && r2 === 'chances') {
+      await auth.requireAdmin(event);
+      await rateLimit('admin', ip);
+      const body = parseBody(event);
+      const ops = body.operations;
+      if (!Array.isArray(ops) || ops.length < 1 || ops.length > MAX_BATCH_OPS) {
+        throw new ApiError(400, 'INVALID_BATCH', `operations 需为 1-${MAX_BATCH_OPS} 条的数组`);
+      }
+      const cleaned = ops.map((op) => ({
+        userId: v.cleanUserId(op && op.userId),
+        chances: v.cleanChances(op && op.chances),
+      }));
+      const result = await updateState((next) => {
+        for (const { userId, chances } of cleaned) {
+          if (!next.users[userId] && Object.keys(next.users).length >= MAX_USERS) {
+            throw new ApiError(400, 'TOO_MANY_USERS', '用户数量已达上限');
+          }
+          const prev = next.users[userId];
+          // 保留原有 lastDrawAt（抽奖间隔门禁仍生效），新用户从 0 开始
+          next.users[userId] = { chances, lastDrawAt: (prev && prev.lastDrawAt) || 0 };
+        }
+        return { updated: cleaned.length };
+      });
+      return json(200, { ok: true, updated: result.info.updated });
     }
 
     /* ---------- 重置活动（管理） ---------- */
