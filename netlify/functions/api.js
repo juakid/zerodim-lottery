@@ -401,6 +401,27 @@ exports.handler = async (event) => {
       return json(200, { ok: true, updated: result.info.updated });
     }
 
+    /* ---------- 删除用户（管理；历史中奖记录保留） ---------- */
+    if (method === 'DELETE' && r1 === 'users' && r2) {
+      await auth.requireAdmin(event);
+      await rateLimit('admin', ip);
+      let rawUserId = r2;
+      try {
+        rawUserId = decodeURIComponent(r2);
+      } catch (err) {
+        throw new ApiError(400, 'INVALID_USER_ID', '用户 ID 格式不正确');
+      }
+      const userId = v.cleanUserId(rawUserId);
+      await updateState((next) => {
+        if (!(userId in next.users)) {
+          throw new ApiError(404, 'NOT_FOUND', '用户不存在');
+        }
+        delete next.users[userId];
+        return null;
+      });
+      return json(200, { ok: true, deleted: userId });
+    }
+
     /* ---------- 重置活动（管理） ---------- */
     if (method === 'POST' && r1 === 'reset') {
       await auth.requireAdmin(event);

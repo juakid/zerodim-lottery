@@ -550,6 +550,25 @@
     input.dataset.original = String(u.chances);
     tdNew.appendChild(input);
     tr.appendChild(tdNew);
+    const tdAct = el('td');
+    const btnDel = el('button', 'btn btn-danger btn-sm', '删除');
+    btnDel.addEventListener('click', async () => {
+      const ok = await confirmDialog({
+        title: '删除用户',
+        text: `确定删除用户「${u.userId}」吗？其抽奖次数将被清除，历史中奖记录会保留。`,
+        okText: '删除',
+      });
+      if (!ok) return;
+      try {
+        await withSync(() => api('DELETE', '/users/' + encodeURIComponent(u.userId)));
+        toast('用户已删除', 'success');
+        loadUsersAdmin();
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    });
+    tdAct.appendChild(btnDel);
+    tr.appendChild(tdAct);
     return tr;
   }
 

@@ -283,6 +283,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   });
   check('批量中非法用户 ID -> 400', r.status === 400);
 
+  // ---------- 删除用户（管理） ----------
+  r = await call('DELETE', '/api/users/' + encodeURIComponent('测试酱'));
+  check('未登录删除用户 -> 401', r.status === 401);
+  r = await call('DELETE', '/api/users/' + encodeURIComponent('不存在的用户'), { cookie: cookie2 });
+  check('删除不存在的用户 -> 404', r.status === 404);
+  r = await call('DELETE', '/api/users/' + encodeURIComponent('测试酱'), { cookie: cookie2 });
+  check('删除用户「测试酱」', r.status === 200 && r.data.deleted === '测试酱');
+  r = await call('GET', '/api/users', { cookie: cookie2 });
+  check('删除后用户列表不再包含「测试酱」', r.status === 200 && !r.data.users.some((u) => u.userId === '测试酱'));
+  r = await call('POST', '/api/draw', { body: { userId: '测试酱' } });
+  check('被删除用户无法抽奖（次数已清除）', r.status === 400 && r.data.error === 'NO_CHANCES');
+
   // ---------- 并发抽奖（不超发） ----------
   // 5 个不同用户各 1 次机会，并发抽取仅剩 3 份的奖品：必须恰好 3 次成功、不超发。
   // （同用户的连点由 DRAW_MIN_INTERVAL_MS 门禁拦截，已在上面 TOO_FAST 用例验证）
