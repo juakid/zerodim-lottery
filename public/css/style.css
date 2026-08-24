@@ -199,8 +199,10 @@ input::placeholder { color: rgba(183, 166, 217, 0.6); }
 input:focus { border-color: var(--pink); box-shadow: 0 0 0 3px rgba(255, 110, 199, 0.22); }
 input[type="number"] { width: 96px; flex: none; }
 
-.field-row { display: flex; gap: 10px; }
-.field-row input { flex: 1; }
+.field-row { display: flex; align-items: center; gap: 10px; }
+.field-row input { flex: 1; min-width: 0; }
+/* 大按钮与输入框同行时按内容自适应宽度（移动端媒体查询里仍是整行按钮） */
+.field-row .btn-lg { flex: none; width: auto; white-space: nowrap; }
 
 .add-prize { display: flex; gap: 10px; margin-bottom: 12px; }
 .add-prize input:first-child { flex: 1; }
