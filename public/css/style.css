@@ -201,8 +201,12 @@ input[type="number"] { width: 96px; flex: none; }
 
 .field-row { display: flex; align-items: center; gap: 10px; }
 .field-row input { flex: 1; min-width: 0; }
-/* 大按钮与输入框同行时按内容自适应宽度（移动端媒体查询里仍是整行按钮） */
-.field-row .btn-lg { flex: none; width: auto; white-space: nowrap; }
+
+/* 抽奖区：输入框与抽奖按钮在所有屏幕尺寸下都上下排列（与移动端一致），
+   避免桌面端两者挤在同一行 */
+.draw-card .field-row { flex-direction: column; align-items: stretch; }
+.draw-card .field-row input { flex: none; width: 100%; }
+.draw-card .field-row .btn-lg { flex: none; width: 100%; }
 
 .add-prize { display: flex; gap: 10px; margin-bottom: 12px; }
 .add-prize input:first-child { flex: 1; }

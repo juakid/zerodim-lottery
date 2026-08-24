@@ -31,13 +31,13 @@
     Content-Security-Policy = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# ---- 静态资源缓存 ----
+# ---- 静态资源缓存（短缓存，避免样式/脚本更新后长时间不生效） ----
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=600"
 
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=600"
