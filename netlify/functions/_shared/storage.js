@@ -76,28 +76,44 @@ async function getImpl() {
       if (!casSupported) {
         console.warn('[storage] 当前 Blobs 环境不支持条件写（CAS），将使用降级策略（写后校验 + 重试）');
       }
+      // 把所有 Blob 操作包一层：失败时转为明确的 STORAGE_ERROR（而不是笼统的 500），
+      // 完整错误仍记录在函数日志中，便于排查。
+      const wrap = (fn) => async (...args) => {
+        try {
+          return await fn(...args);
+        } catch (err) {
+          console.error('[storage] Netlify Blobs 操作失败:', err);
+          throw new ApiError(500, 'STORAGE_ERROR', '数据存储服务暂时不可用，请稍后再试（详见函数日志）');
+        }
+      };
       return {
         mode: 'cloud',
         casSupported,
-        async getWithEtag(key) {
-          const res = await store.getWithMetadata(key, { type: 'json', consistency: 'strong' });
+        // 优先强一致读取；个别环境不支持显式 consistency 参数时自动降级为默认
+        getWithEtag: wrap(async (key) => {
+          let res;
+          try {
+            res = await store.getWithMetadata(key, { type: 'json', consistency: 'strong' });
+          } catch (err) {
+            res = await store.getWithMetadata(key, { type: 'json' });
+          }
           return res ? { data: res.data, etag: res.etag || null } : { data: null, etag: null };
-        },
-        async setPlain(key, value) {
+        }),
+        setPlain: wrap(async (key, value) => {
           await store.setJSON(key, value);
-        },
-        async setConditional(key, value, etag) {
+        }),
+        setConditional: wrap(async (key, value, etag) => {
           const res = await store.setJSON(key, value, etag ? { onlyIfMatch: etag } : { onlyIfNew: true });
           return { modified: res.modified !== false };
-        },
-        async del(key) {
+        }),
+        del: wrap(async (key) => {
           await store.delete(key);
-        },
+        }),
       };
     } catch (err) {
       if (isProd()) {
         console.error('[storage] Netlify Blobs 初始化失败:', err);
-        throw new Error('Blob store unavailable: ' + err.message);
+        throw new ApiError(500, 'STORAGE_ERROR', '数据存储服务初始化失败，请查看 Netlify 函数日志');
       }
       console.warn('[storage] Netlify Blobs 不可用，回退到本地文件存储（仅限本地开发）。原因: ' + err.message);
       return {
