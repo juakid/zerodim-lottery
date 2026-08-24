@@ -35,6 +35,17 @@ function keyToFile(key) {
 }
 
 let implPromise = null;
+let casSupportedCache = null;
+
+/**
+ * 丢弃缓存的存储句柄。Netlify Functions 每次调用都会注入新的 Blobs 上下文
+ * （内含短期令牌，会过期），因此每个请求在 connectLambda(event) 成功后必须
+ * 调用本函数，让下一次 getImpl() 用新令牌重新创建 Store。
+ * CAS 探测结果（casSupportedCache）与令牌无关，跨请求保留。
+ */
+function invalidateImpl() {
+  implPromise = null;
+}
 
 /** 探测当前 Blobs 环境是否支持条件写（CAS） */
 async function probeConditionalWrites(store) {
@@ -68,7 +79,11 @@ async function getImpl() {
     try {
       const blobs = require('@netlify/blobs');
       const store = blobs.getStore(BLOBS_STORE);
-      const casSupported = await probeConditionalWrites(store);
+      let casSupported = casSupportedCache;
+      if (casSupported === null) {
+        casSupported = await probeConditionalWrites(store);
+        casSupportedCache = casSupported;
+      }
       if (!casSupported) {
         console.warn('[storage] 当前 Blobs 环境不支持条件写（CAS），将使用降级策略（写后校验 + 重试）');
       }
@@ -268,6 +283,7 @@ function maxWinners() {
 
 module.exports = {
   getImpl,
+  invalidateImpl,
   readState,
   updateState,
   updateConfig,

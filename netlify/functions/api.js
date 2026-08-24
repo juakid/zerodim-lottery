@@ -35,7 +35,7 @@ const {
 } = require('./_shared/http');
 const { hashPassword, verifyPassword, randomToken } = require('./_shared/crypto');
 const { rateLimit } = require('./_shared/rate-limit');
-const { getImpl, readState, updateState, prizeDrawnCount, maxWinners } = require('./_shared/storage');
+const { getImpl, readState, updateState, prizeDrawnCount, maxWinners, invalidateImpl } = require('./_shared/storage');
 const auth = require('./_shared/auth');
 const v = require('./_shared/validate');
 
@@ -97,10 +97,12 @@ function drawIntervalMs() {
 exports.handler = async (event) => {
   try {
     // 注入 Netlify Blobs 运行上下文（必须最先调用；无 blobs 上下文的
-    // 本地/测试事件会自动跳过）
+    // 本地/测试事件会自动跳过）。每个请求的令牌都是新签发的，
+    // 因此注入成功后必须丢弃旧 Store 句柄，否则令牌过期后全部请求失败。
     if (connectLambda) {
       try {
         connectLambda(event);
+        invalidateImpl();
       } catch (err) {
         /* 事件中无 blobs 字段（本地开发 / 测试）时忽略 */
       }
